@@ -177,4 +177,92 @@ static NSMutableDictionary *keyNames = nil, *nillableKeyNames = nil;
 	return description;
 }
 
+// MARK: -
+// MARK: NSDictionary Representation
+
+static id isModelObjectKey;
+
+static Class modelObjectClassForDictionary(NSDictionary *dictionary)
+{
+	// TODO Find the best matching SMModelObject subclass
+	return Nil;
+}
+
++ (id) objectWithDictionary:(NSDictionary *)dictionary
+{
+	return [[[self alloc] initWithDictionary:dictionary] autorelease];
+}
+
+- (id) objectWithObject:(id)object
+{
+	if ([object isKindOfClass:[NSDictionary class]])
+	{
+		NSDictionary *dictionary = object;
+		Class modelClass = modelObjectClassForDictionary(dictionary);
+		BOOL isModelObject = [objc_getAssociatedObject(dictionary, &isModelObjectKey) boolValue];
+		if (modelClass && !isModelObject)
+		{
+			objc_setAssociatedObject(dictionary, &isModelObjectKey, [NSNumber numberWithBool:YES], OBJC_ASSOCIATION_ASSIGN);
+			return [[[modelClass alloc] initWithDictionary:dictionary] autorelease];
+		}
+		else
+		{
+			NSMutableDictionary *objects = [NSMutableDictionary dictionaryWithCapacity:[dictionary count]];
+			for (id key in dictionary)
+			{
+				id value = [dictionary objectForKey:key];
+				value = [self objectWithObject:value];
+				[objects setObject:value forKey:key];
+			}
+			
+			if (isModelObject)
+			{
+				[self setValuesForKeysWithDictionary:objects];
+				return self;
+			}
+			
+			return objects;
+		}
+	}
+	else if ([object isKindOfClass:[NSArray class]])
+	{
+		NSArray *array = object;
+		NSMutableArray *objects = [NSMutableArray arrayWithCapacity:[array count]];
+		
+		for (id element in array)
+		{
+			element = [self objectWithObject:element];
+			[objects addObject:element];
+		}
+		
+		return objects;
+	}
+	
+	return object;
+}
+
+- (id) initWithDictionary:(NSDictionary *)dictionary
+{
+	if (!(self = [super init]))
+		return nil;
+	
+	Class class = [self class];
+	id newSelf = [self objectWithObject:dictionary];
+	if (newSelf != self)
+	{
+		[newSelf retain];
+		[self release];
+		self = newSelf;
+	}
+	
+	if (class != [SMModelObject class] && self && ![self isMemberOfClass:class])
+	{
+		// Object returned as a different SMModelObject subclass from what it was allocated
+		[self release];
+		self = nil;
+	}
+	
+	return self;
+}
+
 @end

@@ -28,4 +28,9 @@
 // https://github.com/andrep/RMModelObject
 
 @interface SMModelObject : NSObject<NSCoding,NSCopying,NSFastEnumeration>
+
++ (id) objectWithDictionary:(NSDictionary *)dictionary;
+
+- (id) initWithDictionary:(NSDictionary *)dictionary;
+
 @end
