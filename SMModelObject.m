@@ -1,4 +1,5 @@
 #import "SMModelObject.h"
+#import "NSObject+Subclasses.h"
 #import <objc/runtime.h>
 
 // Holds metadata for subclasses of SMModelObject
@@ -184,7 +185,26 @@ static id isModelObjectKey;
 
 static Class modelObjectClassForDictionary(NSDictionary *dictionary)
 {
-	// TODO Find the best matching SMModelObject subclass
+	static NSMutableDictionary *cache = nil;
+	if (cache == nil)
+		cache = [[NSMutableDictionary alloc] init];
+	
+	NSSet *dictionaryKeys = [NSSet setWithArray:[dictionary allKeys]];
+	Class modelObjectClass = [cache objectForKey:dictionaryKeys];
+	if (modelObjectClass != Nil)
+		return modelObjectClass;
+	
+	for (Class modelObjectClass in [SMModelObject subclasses])
+	{
+		SMModelObject *modelObject = [[[modelObjectClass alloc] init] autorelease];
+		NSSet *modelKeys = [NSSet setWithArray:[modelObject allKeys]];
+		if ([dictionaryKeys isSubsetOfSet:modelKeys])
+		{
+			[cache setObject:modelObjectClass forKey:dictionaryKeys];
+			return modelObjectClass;
+		}
+	}
+	
 	return Nil;
 }
 
